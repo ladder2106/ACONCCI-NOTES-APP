@@ -1,9 +1,10 @@
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { Category, ViewMode } from '@/types/note';
+import { Category, Tag, ViewMode } from '@/types/note';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import React from 'react';
+import React, { useContext } from 'react';
 import {
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -13,6 +14,7 @@ import {
 } from 'react-native';
 import Animated, {
     FadeIn,
+    FadeInDown,
     FadeOut,
     SlideInLeft,
     SlideOutLeft,
@@ -26,18 +28,25 @@ interface CategoryDrawerProps {
     onClose: () => void;
     viewMode: ViewMode;
     selectedCategoryId: string | null;
+    selectedTagId: string | null;
     categories: Category[];
+    tags: Tag[];
     noteCounts: {
         all: number;
+        favorites: number;
         pinned: number;
         archived: number;
         trash: number;
         byCategory: Record<string, number>;
+        byTag: Record<string, number>;
     };
     onViewChange: (mode: ViewMode, categoryId?: string) => void;
     onCreateCategory: () => void;
     onDeleteCategory: (id: string) => void;
     onOpenSettings: () => void;
+    onOpenSearch: () => void;
+    onLogout: () => void;
+    userEmail?: string;
 }
 
 // Animated menu item with press scale
@@ -48,6 +57,7 @@ function AnimatedMenuItem({
     active,
     onPress,
     colors,
+    index,
 }: {
     icon: string;
     label: string;
@@ -55,6 +65,7 @@ function AnimatedMenuItem({
     active: boolean;
     onPress: () => void;
     colors: any;
+    index: number;
 }) {
     const scale = useSharedValue(1);
 
@@ -74,6 +85,7 @@ function AnimatedMenuItem({
             activeOpacity={1}
         >
             <Animated.View
+                entering={Platform.OS === 'web' ? undefined : FadeInDown.delay(index * 40).duration(400).springify().damping(20)}
                 style={[
                     styles.menuItem,
                     { backgroundColor: active ? colors.accent : 'transparent' },
@@ -114,15 +126,22 @@ export function CategoryDrawer({
     onCreateCategory,
     onDeleteCategory,
     onOpenSettings,
+    onOpenSearch,
+    onLogout,
+    userEmail,
+    selectedTagId,
+    tags,
 }: CategoryDrawerProps) {
     const colors = useThemeColors();
+    const [categoriesExpanded, setCategoriesExpanded] = React.useState(true);
+    const [tagsExpanded, setTagsExpanded] = React.useState(true);
 
-    const handleViewChange = (mode: ViewMode, categoryId?: string) => {
-        onViewChange(mode, categoryId);
+    const handleViewChange = (mode: ViewMode, id?: string) => {
+        onViewChange(mode, id);
         onClose();
     };
 
-    const rootCategories = categories.filter((c) => !c.parentId);
+    const rootCategories = (categories ?? []).filter((c) => !c.parentId);
 
     if (!visible) return null;
 
@@ -130,8 +149,8 @@ export function CategoryDrawer({
         <View style={StyleSheet.absoluteFill}>
             {/* Backdrop with fade */}
             <Animated.View
-                entering={FadeIn.duration(250)}
-                exiting={FadeOut.duration(200)}
+                entering={Platform.OS === 'web' ? undefined : FadeIn.duration(250)}
+                exiting={Platform.OS === 'web' ? undefined : FadeOut.duration(200)}
                 style={styles.overlay}
             >
                 <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
@@ -139,14 +158,14 @@ export function CategoryDrawer({
 
             {/* Drawer with slide-in from left */}
             <Animated.View
-                entering={SlideInLeft.duration(300).springify().damping(20)}
-                exiting={SlideOutLeft.duration(250)}
+                entering={Platform.OS === 'web' ? undefined : SlideInLeft.duration(300).springify().damping(20)}
+                exiting={Platform.OS === 'web' ? undefined : SlideOutLeft.duration(250)}
                 style={[styles.drawer, { backgroundColor: colors.card }]}
             >
                 {/* Logo */}
                 <View style={[styles.logoSection, { borderBottomColor: colors.border }]}>
-                    <Image
-                        source={require('@/assets/images/aconcci-logo.png')}
+            <Image
+                        source={require('@/assets/images/aconcci-logo-transparent.png')}
                         style={styles.logo}
                         contentFit="contain"
                     />
@@ -156,6 +175,18 @@ export function CategoryDrawer({
                     {/* View modes */}
                     <View style={styles.section}>
                         <AnimatedMenuItem
+                            index={0}
+                            icon="search-outline"
+                            label="Search"
+                            active={false}
+                            onPress={() => {
+                                onClose();
+                                onOpenSearch();
+                            }}
+                            colors={colors}
+                        />
+                        <AnimatedMenuItem
+                            index={1}
                             icon="folder-open-outline"
                             label="All Notes"
                             count={noteCounts.all}
@@ -164,6 +195,16 @@ export function CategoryDrawer({
                             colors={colors}
                         />
                         <AnimatedMenuItem
+                            index={2}
+                            icon="heart-outline"
+                            label="Favorites"
+                            count={noteCounts.favorites}
+                            active={viewMode === 'favorites'}
+                            onPress={() => handleViewChange('favorites')}
+                            colors={colors}
+                        />
+                        <AnimatedMenuItem
+                            index={3}
                             icon="pin-outline"
                             label="Pinned"
                             count={noteCounts.pinned}
@@ -172,6 +213,7 @@ export function CategoryDrawer({
                             colors={colors}
                         />
                         <AnimatedMenuItem
+                            index={4}
                             icon="archive-outline"
                             label="Archived"
                             count={noteCounts.archived}
@@ -180,6 +222,7 @@ export function CategoryDrawer({
                             colors={colors}
                         />
                         <AnimatedMenuItem
+                            index={5}
                             icon="trash-outline"
                             label="Trash"
                             count={noteCounts.trash}
@@ -191,53 +234,134 @@ export function CategoryDrawer({
 
                     {/* Categories */}
                     <View style={[styles.section, { borderTopColor: colors.border, borderTopWidth: 1 }]}>
-                        <View style={styles.sectionHeader}>
+                        <TouchableOpacity 
+                            style={styles.sectionHeader}
+                            onPress={() => setCategoriesExpanded(!categoriesExpanded)}
+                        >
                             <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
                                 CATEGORIES
                             </Text>
                             <TouchableOpacity onPress={onCreateCategory}>
                                 <Ionicons name="add" size={18} color={colors.primary} />
                             </TouchableOpacity>
-                        </View>
+                        </TouchableOpacity>
 
-                        {rootCategories.map((category) => {
-                            const count = noteCounts.byCategory[category.id] || 0;
-                            const isActive =
-                                viewMode === 'category' && selectedCategoryId === category.id;
+                        {categoriesExpanded && (
+                            <Animated.View entering={Platform.OS === 'web' ? undefined : FadeInDown.duration(300).springify().damping(20)} exiting={Platform.OS === 'web' ? undefined : FadeOut.duration(200)}>
+                                {rootCategories.map((category, index) => {
+                                    const count = noteCounts.byCategory[category.id] || 0;
+                                    const isActive =
+                                        viewMode === 'category' && selectedCategoryId === category.id;
 
-                            return (
-                                <TouchableOpacity
-                                    key={category.id}
-                                    onPress={() => handleViewChange('category', category.id)}
-                                    onLongPress={() => onDeleteCategory(category.id)}
-                                    style={[
-                                        styles.categoryItem,
-                                        { backgroundColor: isActive ? colors.accent : 'transparent' },
-                                    ]}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.categoryIcon}>{category.icon}</Text>
-                                    <Text
-                                        style={[
-                                            styles.categoryName,
-                                            { color: isActive ? category.color : colors.text },
-                                        ]}
-                                        numberOfLines={1}
-                                    >
-                                        {category.name}
+                                    return (
+                                        <Animated.View 
+                                            key={category.id}
+                                            entering={Platform.OS === 'web' ? undefined : FadeInDown.delay(300 + index * 40).duration(400).springify().damping(20)}
+                                        >
+                                            <TouchableOpacity
+                                                onPress={() => handleViewChange('category', category.id)}
+                                                onLongPress={() => {
+                                                    onDeleteCategory(category.id);
+                                                }}
+                                                delayLongPress={300}
+                                                style={[
+                                                    styles.categoryItem,
+                                                    { backgroundColor: isActive ? colors.accent : 'transparent' },
+                                                ]}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Text 
+                                                    style={styles.categoryEmoji}
+                                                >
+                                                    {category.icon}
+                                                </Text>
+                                                <Text
+                                                    style={[
+                                                        styles.categoryName,
+                                                        { color: isActive ? category.color : colors.text },
+                                                    ]}
+                                                    numberOfLines={1}
+                                                >
+                                                    {category.name}
+                                                </Text>
+                                                {count > 0 && (
+                                                    <Text style={[styles.menuCount, { color: colors.mutedForeground, marginRight: 8 }]}>
+                                                        {count > 99 ? '99+' : count}
+                                                    </Text>
+                                                )}
+                                            </TouchableOpacity>
+                                        </Animated.View>
+                                    );
+                                })}
+                            </Animated.View>
+                        )}
+                    </View>
+
+                    {/* Tags */}
+                    <View style={[styles.section, { borderTopColor: colors.border, borderTopWidth: 1 }]}>
+                        <TouchableOpacity 
+                            style={styles.sectionHeader}
+                            onPress={() => setTagsExpanded(!tagsExpanded)}
+                        >
+                            <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+                                TAGS
+                            </Text>
+                            <Ionicons 
+                                name={tagsExpanded ? "chevron-down" : "chevron-forward"} 
+                                size={14} 
+                                color={colors.mutedForeground} 
+                            />
+                        </TouchableOpacity>
+
+                        {tagsExpanded && (
+                            <Animated.View entering={Platform.OS === 'web' ? undefined : FadeInDown.duration(300).springify().damping(20)} exiting={Platform.OS === 'web' ? undefined : FadeOut.duration(200)}>
+                                {(tags ?? []).length === 0 ? (
+                                    <Text style={[styles.emptyItemText, { color: colors.mutedForeground, marginLeft: 12, marginTop: 4, marginBottom: 16 }]}>
+                                        No tags yet. Add tags inside a note.
                                     </Text>
-                                    {count > 0 && (
-                                        <Text style={[styles.menuCount, { color: colors.mutedForeground }]}>
-                                            {count > 99 ? '99+' : count}
-                                        </Text>
-                                    )}
-                                </TouchableOpacity>
-                            );
-                        })}
+                                ) : (
+                                    (tags ?? []).map((tag, index) => {
+                                        const count = noteCounts.byTag?.[tag.id] || 0;
+                                        const isActive = viewMode === 'tag' && selectedTagId === tag.id;
+
+                                        return (
+                                            <Animated.View 
+                                                key={tag.id}
+                                                entering={Platform.OS === 'web' ? undefined : FadeInDown.delay(100 + index * 40).duration(400).springify().damping(20)}
+                                            >
+                                                <TouchableOpacity
+                                                    onPress={() => handleViewChange('tag', tag.id)}
+                                                    style={[
+                                                        styles.tagItem,
+                                                        { backgroundColor: isActive ? colors.accent : 'transparent' },
+                                                    ]}
+                                                    activeOpacity={0.7}
+                                                >
+                                                    <View style={[styles.tagDot, { backgroundColor: tag.color }]} />
+                                                    <Text
+                                                        style={[
+                                                            styles.tagName,
+                                                            { color: isActive ? tag.color : colors.text },
+                                                        ]}
+                                                        numberOfLines={1}
+                                                    >
+                                                        {tag.name}
+                                                    </Text>
+                                                    {count > 0 && (
+                                                        <Text style={[styles.menuCount, { color: colors.mutedForeground, marginRight: 8 }]}>
+                                                            {count > 99 ? '99+' : count}
+                                                        </Text>
+                                                    )}
+                                                </TouchableOpacity>
+                                            </Animated.View>
+                                        );
+                                    })
+                                )}
+                            </Animated.View>
+                        )}
                     </View>
                 </ScrollView>
 
-                {/* Settings */}
                 <TouchableOpacity
                     onPress={() => {
                         onClose();
@@ -247,6 +371,22 @@ export function CategoryDrawer({
                 >
                     <Ionicons name="settings-outline" size={18} color={colors.mutedForeground} />
                     <Text style={[styles.menuLabel, { color: colors.text }]}>Settings</Text>
+                </TouchableOpacity>
+
+                {/* Log Out */}
+                <TouchableOpacity
+                    onPress={onLogout}
+                    style={[styles.logoutButton, { borderTopColor: colors.border }]}
+                >
+                    <Ionicons name="log-out-outline" size={18} color={colors.destructive} />
+                    <View style={styles.logoutTextContainer}>
+                        {userEmail ? (
+                            <Text style={[styles.userEmail, { color: colors.mutedForeground }]}>
+                                Signed in as {userEmail}
+                            </Text>
+                        ) : null}
+                        <Text style={[styles.menuLabel, { color: colors.destructive }]}>Log Out</Text>
+                    </View>
                 </TouchableOpacity>
             </Animated.View>
         </View>
@@ -271,8 +411,8 @@ const styles = StyleSheet.create({
         paddingTop: 60,
     },
     logo: {
-        width: 140,
-        height: 35,
+        width: 160,
+        height: 40,
     },
     content: {
         flex: 1,
@@ -319,16 +459,57 @@ const styles = StyleSheet.create({
     categoryIcon: {
         fontSize: 14,
     },
+    categoryEmoji: {
+        fontSize: 18,
+    },
     categoryName: {
         fontSize: 13,
         flex: 1,
+    },
+    tagItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
+        gap: 10,
+    },
+    tagDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginLeft: 4,
+    },
+    tagName: {
+        fontSize: 13,
+        flex: 1,
+        marginLeft: 4,
+    },
+    emptyItemText: {
+        fontSize: 12,
+        fontStyle: 'italic',
     },
 
     settingsButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         gap: 12,
         borderTopWidth: 1,
+    },
+    logoutButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 12,
+        borderTopWidth: 1,
+    },
+    logoutTextContainer: {
+        flex: 1,
+    },
+    userEmail: {
+        fontSize: 12,
     },
 });

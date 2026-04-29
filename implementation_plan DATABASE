@@ -1,0 +1,66 @@
+# Database & API Strategy for ACONCCI Notes App
+
+## Goal Description
+Transition from basic `AsyncStorage` to a robust database (SQLite) and define API requirements for cloud features. This will improve performance, data integrity, and enable future sync/sharing features.
+
+## Proposed Changes
+
+### [Database] SQLite Schema
+A relational database like `expo-sqlite` is recommended for local persistence.
+
+#### `notes` table
+- [id](file:///c:/Users/USER/ACONCCInotesapp/types/note.ts#68-74): TEXT (Primary Key)
+- `title`: TEXT
+- `content`: TEXT
+- `type`: TEXT (vault, sticky, journal, plain_text, voice, image, video, drawing, checklist, reminder)
+- `createdAt`: TEXT (ISO 8601)
+- `updatedAt`: TEXT (ISO 8601)
+- `categoryId`: TEXT (Foreign Key -> categories.id)
+- `isFavorite`: INTEGER (0/1)
+- `isPinned`: INTEGER (0/1)
+- `isArchived`: INTEGER (0/1)
+- `isTrashed`: INTEGER (0/1)
+- `color`: TEXT
+- `isMarkdown`: INTEGER (0/1)
+- `lastOpenedAt`: TEXT (ISO 8601)
+- `metadata`: TEXT (JSON string for type-specific fields like `moodEmoji`, `audioUrl`, `checklistItems`)
+
+#### `categories` table
+- [id](file:///c:/Users/USER/ACONCCInotesapp/types/note.ts#68-74): TEXT (Primary Key)
+- `name`: TEXT
+- `color`: TEXT
+- `icon`: TEXT
+- `parentId`: TEXT (Self-referential FK)
+- `createdAt`: TEXT (ISO 8601)
+
+#### `tags` table
+- [id](file:///c:/Users/USER/ACONCCInotesapp/types/note.ts#68-74): TEXT (Primary Key)
+- `name`: TEXT
+- `color`: TEXT
+- `createdAt`: TEXT (ISO 8601)
+
+#### `note_tags` (Join table)
+- `noteId`: TEXT (FK -> notes.id)
+- `tagId`: TEXT (FK -> tags.id)
+
+### [API] Requirements & Strategy
+For features requiring a backend, we recommend a "Backend-as-a-Service" like **Supabase** or **Firebase**.
+
+#### Sync API
+- `POST /sync`: Push local changes and pull remote updates.
+- `GET /notes`: Retrieve all notes for a user (with pagination).
+
+#### Media API
+- `POST /upload`: Upload audio/image/video files to cloud storage (S3/Supabase Storage).
+- `GET /media/:id`: Retrieve signed URLs for media.
+
+#### AI API (Optional)
+- `POST /transcribe`: Convert voice notes to text.
+- `POST /summarize`: Generate summaries for long notes.
+
+## Verification Plan
+
+### Manual Verification
+1.  **Architecture Review**: Confirm the schema covers all current [Note](file:///c:/Users/USER/ACONCCInotesapp/types/note.ts#110-121) types and future scalability needs.
+2.  **Performance Test**: Simulate 1000+ notes in the DB to ensure indexing works and the UI remains responsive.
+3.  **Sync Simulation**: Verify the data structure can be serialized/deserialized for API calls.

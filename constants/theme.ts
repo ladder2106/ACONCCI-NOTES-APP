@@ -1,75 +1,60 @@
 import { Platform } from 'react-native';
 
-// ACONCCI Brand Colors
+// ACONCCI Brand Colors - Modern Minimalist
 export const Brand = {
-  primary: '#3EACC6',    // Cyan
-  secondary: '#ED9097',  // Coral
+  primary: '#2563EB',    // Modern Blue
+  secondary: '#64748B',  // Slate Gray
 };
 
 export const Colors = {
   light: {
-    text: '#1a1a1a',
-    background: '#fafafa',
+    text: '#1E293B',
+    background: '#FFFFFF',
     tint: Brand.primary,
-    icon: '#6b6b6b',
-    tabIconDefault: '#6b6b6b',
+    icon: '#64748B',
+    tabIconDefault: '#94A3B8',
     tabIconSelected: Brand.primary,
-    card: '#ffffff',
-    cardForeground: '#1a1a1a',
+    card: '#F8FAFC',
+    cardForeground: '#1E293B',
     primary: Brand.primary,
-    primaryForeground: '#ffffff',
+    primaryForeground: '#FFFFFF',
     secondary: Brand.secondary,
-    secondaryForeground: '#ffffff',
-    muted: '#f5f5f5',
-    mutedForeground: '#6b6b6b',
-    accent: '#f0f9fb',
-    accentForeground: '#1a1a1a',
-    destructive: '#d4183d',
-    destructiveForeground: '#ffffff',
-    border: '#e5e5e5',
-    inputBackground: '#ffffff',
+    secondaryForeground: '#FFFFFF',
+    muted: '#F1F5F9',
+    mutedForeground: '#64748B',
+    accent: '#EFF6FF',
+    accentForeground: '#1E293B',
+    destructive: '#EF4444',
+    destructiveForeground: '#FFFFFF',
+    border: '#E2E8F0',
+    inputBackground: '#FFFFFF',
   },
   dark: {
-    text: '#fafafa',
-    background: '#1a1a1a',
+    text: '#F8FAFC',
+    background: '#0A0A0A', // Neutral Black
     tint: Brand.primary,
-    icon: '#a1a1a1',
-    tabIconDefault: '#a1a1a1',
+    icon: '#A0A0A0', // Neutral Gray
+    tabIconDefault: '#707070',
     tabIconSelected: Brand.primary,
-    card: '#1a1a1a',
-    cardForeground: '#fafafa',
+    card: '#121212', // Dark Gray
+    cardForeground: '#F8FAFC',
     primary: Brand.primary,
-    primaryForeground: '#ffffff',
+    primaryForeground: '#FFFFFF',
     secondary: Brand.secondary,
-    secondaryForeground: '#ffffff',
-    muted: '#2a2a2a',
-    mutedForeground: '#a1a1a1',
-    accent: '#2a2a2a',
-    accentForeground: '#fafafa',
-    destructive: '#d4183d',
-    destructiveForeground: '#ffffff',
-    border: '#333333',
-    inputBackground: '#2a2a2a',
+    secondaryForeground: '#FFFFFF',
+    muted: '#1E1E1E', // Neutral Muted
+    mutedForeground: '#A0A0A0',
+    accent: '#1A1A1A', // Neutral Accent
+    accentForeground: '#F8FAFC',
+    destructive: '#EF4444',
+    destructiveForeground: '#FFFFFF',
+    border: '#2A2A2A', // Neutral Border
+    inputBackground: '#121212',
   },
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    sans: 'system-ui',
-    serif: 'ui-serif',
-    rounded: 'ui-rounded',
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+export const Fonts = {
+  sans: Platform.select({ ios: 'System', default: 'sans-serif' }),
+  serif: 'serif',
+  mono: 'monospace',
+};

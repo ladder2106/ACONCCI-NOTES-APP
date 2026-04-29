@@ -10,6 +10,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 
 export const NotesScreen: React.FC = () => {
@@ -251,17 +252,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   titleInput: {
+    padding: 15,
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16,
-    padding: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    ...(Platform.OS === 'web' && { outlineStyle: 'none' } as any),
   },
   contentInput: {
-    flex: 1,
+    padding: 15,
     fontSize: 16,
-    padding: 8,
+    flex: 1,
     textAlignVertical: 'top',
+    ...(Platform.OS === 'web' && { outlineStyle: 'none' } as any),
   },
 });

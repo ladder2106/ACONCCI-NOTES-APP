@@ -10,7 +10,9 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    TouchableOpacity,
     View,
+    Platform,
 } from 'react-native';
 
 export default function SearchScreen() {
@@ -137,6 +139,7 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 15,
         paddingVertical: 0,
+        ...(Platform.OS === 'web' && { outlineStyle: 'none' } as any),
     },
     resultCount: {
         fontSize: 12,

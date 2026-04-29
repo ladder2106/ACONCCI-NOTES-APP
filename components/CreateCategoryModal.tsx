@@ -1,5 +1,5 @@
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/types/note';
+import { CATEGORY_COLORS } from '@/types/note';
 import React, { useState } from 'react';
 import {
     Modal,
@@ -18,6 +18,27 @@ interface CreateCategoryModalProps {
     onCreateCategory: (name: string, color: string, icon: string) => void;
 }
 
+// Popular emojis for categories
+const CATEGORY_EMOJIS = [
+    '🏠', '💼', '📚', '💡', '🎯', '🏃', '🍎', '✈️', '🍽️', '🛒', 
+    '🚗', '🎵', '📷', '🎮', '🎨', '💻', '📱', '📧', '📅', '📰',
+    '🏥', '🏋️', '🌍', '💰', '🎁', '⭐', '🔖', '🏷️', '⚙️', '🗂️',
+    '🔍', '🔔', '⏰', '📍', '🗺️', '🖼️', '🎬', '🎤', '✏️', '☑️',
+    '🛡️', '💗', '🏆', '🌟', '🚀', '🔥', '💎', '🌈', '🦄', '🎪',
+    '☕', '🍕', '🌮', '🥗', '🍷', '🍰', '🎂', '🌺', '🌸', '🌼',
+    '🐶', '🐱', '🐭', '🐹', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁',
+    '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅',
+    '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌',
+    '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖',
+    '🦕', '🐙', '🦑', '🦐', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳',
+    '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦌', '🦏', '🦛', '🐪',
+    '🐘', '🦣', '🦡', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑',
+    '🦙', '🐒', '🦍', '🦧', '🐿️', '🦔', '🦇', '🦅', '🦉', '🦤',
+    '🦢', '🦩', '🦚', '🦃', '🐔', '🐓', '🦤', '🦩', '🦚', '🦃',
+    '🦆', '🦅', '🦉', '🦇', '🦢', '🦩', '🦚', '🦃', '🐔', '🐓',
+    '🦤', '🦩', '🦚', '🦃', '🐔', '🐓', '🦤', '🦩', '🦚', '🦃',
+];
+
 export function CreateCategoryModal({
     visible,
     onClose,
@@ -25,14 +46,14 @@ export function CreateCategoryModal({
 }: CreateCategoryModalProps) {
     const colors = useThemeColors();
     const [name, setName] = useState('');
-    const [selectedIcon, setSelectedIcon] = useState(CATEGORY_ICONS[0]);
+    const [selectedEmoji, setSelectedEmoji] = useState('🏠');
     const [selectedColor, setSelectedColor] = useState(CATEGORY_COLORS[0]);
 
     const handleSubmit = () => {
         if (name.trim()) {
-            onCreateCategory(name.trim(), selectedColor, selectedIcon);
+            onCreateCategory(name.trim(), selectedColor, selectedEmoji);
             setName('');
-            setSelectedIcon(CATEGORY_ICONS[0]);
+            setSelectedEmoji('🏠');
             setSelectedColor(CATEGORY_COLORS[0]);
             onClose();
         }
@@ -55,19 +76,19 @@ export function CreateCategoryModal({
                             autoFocus
                         />
 
-                        <Text style={[styles.label, { color: colors.text }]}>Icon</Text>
-                        <View style={styles.iconGrid}>
-                            {CATEGORY_ICONS.map((icon) => (
+                        <Text style={[styles.label, { color: colors.text }]}>Emoji</Text>
+                        <View style={styles.emojiGrid}>
+                            {CATEGORY_EMOJIS.map((emoji) => (
                                 <TouchableOpacity
-                                    key={icon}
-                                    onPress={() => setSelectedIcon(icon)}
+                                    key={emoji}
+                                    onPress={() => setSelectedEmoji(emoji)}
                                     style={[
-                                        styles.iconItem,
-                                        { borderColor: selectedIcon === icon ? colors.primary : colors.border },
-                                        selectedIcon === icon && { backgroundColor: colors.accent },
+                                        styles.emojiItem,
+                                        { borderColor: selectedEmoji === emoji ? colors.primary : colors.border },
+                                        selectedEmoji === emoji && { backgroundColor: colors.accent },
                                     ]}
                                 >
-                                    <Text style={styles.iconText}>{icon}</Text>
+                                    <Text style={styles.emojiText}>{emoji}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -91,22 +112,24 @@ export function CreateCategoryModal({
                             ))}
                         </View>
 
-                        <View style={styles.buttonRow}>
-                            <TouchableOpacity
-                                onPress={onClose}
-                                style={[styles.button, styles.cancelButton, { borderColor: colors.border }]}
-                            >
-                                <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={handleSubmit}
-                                style={[styles.button, styles.submitButton, { backgroundColor: colors.primary, opacity: name.trim() ? 1 : 0.5 }]}
-                                disabled={!name.trim()}
-                            >
-                                <Text style={[styles.buttonText, { color: '#fff' }]}>Create</Text>
-                            </TouchableOpacity>
-                        </View>
                     </ScrollView>
+
+                    {/* Always-visible action buttons — outside ScrollView */}
+                    <View style={styles.buttonRow}>
+                        <TouchableOpacity
+                            onPress={onClose}
+                            style={[styles.button, styles.cancelButton, { borderColor: colors.border }]}
+                        >
+                            <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={handleSubmit}
+                            style={[styles.button, styles.submitButton, { backgroundColor: colors.primary, opacity: name.trim() ? 1 : 0.5 }]}
+                            disabled={!name.trim()}
+                        >
+                            <Text style={[styles.buttonText, { color: '#fff' }]}>Create Category</Text>
+                        </TouchableOpacity>
+                    </View>
                 </Pressable>
             </Pressable>
         </Modal>
@@ -137,17 +160,18 @@ const styles = StyleSheet.create({
         marginTop: 16,
     },
     input: {
-        borderWidth: 1,
+        borderWidth: 0,
         borderRadius: 10,
         padding: 12,
         fontSize: 15,
+        outlineStyle: 'none' as any,
     },
-    iconGrid: {
+    emojiGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
     },
-    iconItem: {
+    emojiItem: {
         width: 44,
         height: 44,
         borderRadius: 10,
@@ -155,7 +179,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    iconText: {
+    emojiText: {
         fontSize: 20,
     },
     colorGrid: {

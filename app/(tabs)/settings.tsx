@@ -1,9 +1,10 @@
-import { CreateTagModal } from '@/components/CreateTagModal';
+import { EditTagModal } from '@/components/EditTagModal';
 import { Brand } from '@/constants/theme';
 import { AppStateContext } from '@/context/AppStateContext';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { exportToJSON } from '@/utils/export';
+import { Tag } from '@/types/note';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useContext, useState } from 'react';
 import {
     Alert,
@@ -19,7 +20,9 @@ import {
 export default function SettingsScreen() {
     const appState = useContext(AppStateContext);
     const colors = useThemeColors();
-    const [showTagDialog, setShowTagDialog] = useState(false);
+    const router = useRouter();
+    const [tagToEdit, setTagToEdit] = useState<Tag | null>(null);
+    const [showColorPicker, setShowColorPicker] = useState(false);
 
     if (!appState) {
         return (
@@ -39,11 +42,13 @@ export default function SettingsScreen() {
         icon,
         label,
         value,
+        rightElement,
         onPress,
     }: {
         icon: string;
         label: string;
         value?: string;
+        rightElement?: React.ReactNode;
         onPress?: () => void;
     }) => (
         <TouchableOpacity
@@ -56,9 +61,10 @@ export default function SettingsScreen() {
                 <Ionicons name={icon as any} size={18} color={colors.primary} />
                 <Text style={[styles.settingLabel, { color: colors.text }]}>{label}</Text>
             </View>
-            {value && (
+            {(value || rightElement) && (
                 <View style={styles.settingRight}>
-                    <Text style={[styles.settingValue, { color: colors.mutedForeground }]}>{value}</Text>
+                    {value && <Text style={[styles.settingValue, { color: colors.mutedForeground }]}>{value}</Text>}
+                    {rightElement}
                     {onPress && <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />}
                 </View>
             )}
@@ -90,20 +96,25 @@ export default function SettingsScreen() {
         </View>
     );
 
-
-
-    const handleDefaultView = () => {
-        Alert.alert('Default View', 'Choose the default view', [
-            { text: 'List', onPress: () => appState.updateSettings({ defaultView: 'list' }) },
-            { text: 'Grid', onPress: () => appState.updateSettings({ defaultView: 'grid' }) },
-            { text: 'Cancel', style: 'cancel' },
-        ]);
-    };
+    const EXPANDED_COLORS = [
+        '#F87171', '#FCA5A5', '#EF4444', '#B91C1C', // Reds
+        '#FB923C', '#FDBA74', '#F97316', '#C2410C', // Oranges
+        '#FACC15', '#FDE047', '#EAB308', '#A16207', // Yellows
+        '#4ADE80', '#86EFAC', '#22C55E', '#15803D', // Greens
+        '#2DD4BF', '#5EEAD4', '#14B8A6', '#0F766E', // Teals
+        '#60A5FA', '#93C5FD', '#3B82F6', '#2563EB', // Blues
+        '#818CF8', '#A5B4FC', '#6366F1', '#4338CA', // Indigos
+        '#A855F7', '#C084FC', '#8B5CF6', '#6D28D9', // Purples
+        '#EC4899', '#F472B6', '#D946EF', '#BE185D', // Pinks
+    ];
 
     const handleSortBy = () => {
         Alert.alert('Sort By', '', [
             { text: 'Date Modified', onPress: () => appState.updateSettings({ sortBy: 'dateModified' }) },
             { text: 'Date Created', onPress: () => appState.updateSettings({ sortBy: 'dateCreated' }) },
+            { text: 'Last Opened', onPress: () => appState.updateSettings({ sortBy: 'lastOpened' }) },
+            { text: 'Note Type', onPress: () => appState.updateSettings({ sortBy: 'noteType' }) },
+            { text: 'Size', onPress: () => appState.updateSettings({ sortBy: 'size' }) },
             { text: 'Title', onPress: () => appState.updateSettings({ sortBy: 'title' }) },
             { text: 'Cancel', style: 'cancel' },
         ]);
@@ -111,33 +122,23 @@ export default function SettingsScreen() {
 
     const handleSortOrder = () => {
         Alert.alert('Sort Order', '', [
-            { text: 'Newest First', onPress: () => appState.updateSettings({ sortOrder: 'desc' }) },
-            { text: 'Oldest First', onPress: () => appState.updateSettings({ sortOrder: 'asc' }) },
+            { text: 'Newest/Largest First', onPress: () => appState.updateSettings({ sortOrder: 'desc' }) },
+            { text: 'Oldest/Smallest First', onPress: () => appState.updateSettings({ sortOrder: 'asc' }) },
             { text: 'Cancel', style: 'cancel' },
         ]);
     };
 
-    const handleExportAll = () => {
-        Alert.alert(
-            'Export All Data',
-            'Export all notes, categories, and tags as JSON?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Export',
-                    onPress: () => exportToJSON(appState.notes, appState.categories, appState.tags),
-                },
-            ]
-        );
-    };
-
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={styles.header}>
-                    <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
-                </View>
+            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <Ionicons name="chevron-back" size={24} color={colors.primary} />
+                </TouchableOpacity>
+                <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+                <View style={{ width: 40 }} />
+            </View>
 
+            <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Appearance */}
                 <SectionTitle>APPEARANCE</SectionTitle>
                 <View style={[styles.section, { backgroundColor: colors.card }]}>
@@ -147,12 +148,54 @@ export default function SettingsScreen() {
                         value={appState.settings.theme === 'dark'}
                         onToggle={(val) => appState.updateSettings({ theme: val ? 'dark' : 'light' })}
                     />
+
+                    {/* Accent Color Picker Toggle */}
                     <SettingRow
-                        icon="grid-outline"
-                        label="Default View"
-                        value={appState.settings.defaultView === 'list' ? 'List' : 'Grid'}
-                        onPress={handleDefaultView}
+                        icon="color-palette-outline"
+                        label="Accent Color"
+                        onPress={() => setShowColorPicker(!showColorPicker)}
+                        rightElement={
+                            appState.settings.accentColor ? (
+                                <View style={[styles.inlineSwatch, { backgroundColor: appState.settings.accentColor }]} />
+                            ) : (
+                                <Text style={[styles.settingValue, { color: colors.mutedForeground }]}>Default</Text>
+                            )
+                        }
                     />
+
+                    {showColorPicker && (
+                        <View style={styles.expandedColorPicker}>
+                            <View style={styles.colorGrid}>
+                                <TouchableOpacity
+                                    onPress={() => appState.updateSettings({ accentColor: undefined })}
+                                    style={[
+                                        styles.colorSwatch,
+                                        { backgroundColor: '#00000010' },
+                                        !appState.settings.accentColor && styles.selectedSwatch
+                                    ]}
+                                >
+                                    {!appState.settings.accentColor && (
+                                        <Ionicons name="checkmark" size={16} color={colors.text} />
+                                    )}
+                                </TouchableOpacity>
+                                {EXPANDED_COLORS.map(color => (
+                                    <TouchableOpacity
+                                        key={color}
+                                        onPress={() => appState.updateSettings({ accentColor: color })}
+                                        style={[
+                                            styles.colorSwatch,
+                                            { backgroundColor: color },
+                                            appState.settings.accentColor === color && styles.selectedSwatch
+                                        ]}
+                                    >
+                                        {appState.settings.accentColor === color && (
+                                            <Ionicons name="checkmark" size={16} color="#fff" />
+                                        )}
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+                    )}
                 </View>
 
                 {/* Sorting */}
@@ -162,19 +205,19 @@ export default function SettingsScreen() {
                         icon="swap-vertical-outline"
                         label="Sort By"
                         value={
-                            appState.settings.sortBy === 'dateModified'
-                                ? 'Date Modified'
-                                : appState.settings.sortBy === 'dateCreated'
-                                    ? 'Date Created'
-                                    : 'Title'
+                            appState.settings.sortBy === 'dateModified' ? 'Date Modified' :
+                                appState.settings.sortBy === 'dateCreated' ? 'Date Created' :
+                                    appState.settings.sortBy === 'lastOpened' ? 'Last Opened' :
+                                        appState.settings.sortBy === 'noteType' ? 'Note Type' :
+                                            appState.settings.sortBy === 'size' ? 'Size' : 'Title'
                         }
                         onPress={handleSortBy}
                     />
-                    <SettingRow
-                        icon="arrow-down-outline"
-                        label="Sort Order"
-                        value={appState.settings.sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
-                        onPress={handleSortOrder}
+                    <ToggleRow
+                        icon="funnel-outline"
+                        label="Newest/Largest First"
+                        value={appState.settings.sortOrder === 'desc'}
+                        onToggle={(val) => appState.updateSettings({ sortOrder: val ? 'desc' : 'asc' })}
                     />
                 </View>
 
@@ -210,7 +253,7 @@ export default function SettingsScreen() {
                                 key={tag.id}
                                 style={[styles.tagRow, { borderBottomColor: colors.border }]}
                                 onLongPress={() => {
-                                    Alert.alert('Delete Tag?', `Delete "${tag.name}"?`, [
+                                    Alert.alert('Delete Tag Globally?', `Delete "${tag.name}" from all notes and settings?`, [
                                         { text: 'Cancel', style: 'cancel' },
                                         {
                                             text: 'Delete',
@@ -219,30 +262,13 @@ export default function SettingsScreen() {
                                         },
                                     ]);
                                 }}
+                                onPress={() => setTagToEdit(tag)}
                             >
                                 <View style={[styles.tagColor, { backgroundColor: tag.color }]} />
                                 <Text style={[styles.tagName, { color: colors.text }]}>{tag.name}</Text>
                             </TouchableOpacity>
                         ))
                     )}
-                    <TouchableOpacity
-                        onPress={() => setShowTagDialog(true)}
-                        style={styles.addTagButton}
-                    >
-                        <Ionicons name="add" size={18} color={colors.primary} />
-                        <Text style={[styles.addTagText, { color: colors.primary }]}>Add Tag</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Data */}
-                <SectionTitle>DATA</SectionTitle>
-                <View style={[styles.section, { backgroundColor: colors.card }]}>
-                    <SettingRow
-                        icon="download-outline"
-                        label="Export All Data"
-                        value="JSON"
-                        onPress={handleExportAll}
-                    />
                 </View>
 
                 {/* About */}
@@ -261,10 +287,13 @@ export default function SettingsScreen() {
                 <View style={{ height: 40 }} />
             </ScrollView>
 
-            <CreateTagModal
-                visible={showTagDialog}
-                onClose={() => setShowTagDialog(false)}
-                onCreateTag={appState.createTag}
+            <EditTagModal
+                visible={!!tagToEdit}
+                tag={tagToEdit}
+                onClose={() => setTagToEdit(null)}
+                onSaveTag={(id, name, color) => {
+                    appState.updateTag(id, { name, color });
+                }}
             />
         </SafeAreaView>
     );
@@ -323,6 +352,7 @@ const styles = StyleSheet.create({
     },
     settingValue: {
         fontSize: 14,
+        textTransform: 'capitalize',
     },
     emptyTags: {
         padding: 14,
@@ -357,5 +387,38 @@ const styles = StyleSheet.create({
     addTagText: {
         fontSize: 14,
         fontWeight: '600',
+    },
+    expandedColorPicker: {
+        padding: 16,
+        paddingTop: 0,
+    },
+    colorGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        justifyContent: 'center',
+    },
+    colorSwatch: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    selectedSwatch: {
+        borderWidth: 3,
+        borderColor: '#00000030',
+        transform: [{ scale: 1.15 }]
+    },
+    backButton: {
+        padding: 4,
+    },
+    inlineSwatch: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        borderWidth: 1,
+        borderColor: '#00000020',
+        marginRight: 4,
     },
 });

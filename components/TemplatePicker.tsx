@@ -1,9 +1,11 @@
 import { noteTemplates } from '@/context/AppStateContext';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { NoteTemplate } from '@/types/note';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
     Modal,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
@@ -24,7 +26,7 @@ interface TemplatePickerProps {
     onSelectTemplate: (template: NoteTemplate) => void;
 }
 
-// Animated template card with bounce + press scale
+// Animated template card with bounce + press scale     
 function TemplateCard({
     template,
     index,
@@ -44,7 +46,7 @@ function TemplateCard({
 
     return (
         <Animated.View
-            entering={ZoomIn.delay(100 + index * 80)
+            entering={Platform.OS === 'web' ? undefined : ZoomIn.delay(100 + index * 80)
                 .duration(350)
                 .springify()
                 .damping(14)}
@@ -67,7 +69,12 @@ function TemplateCard({
                         animatedStyle,
                     ]}
                 >
-                    <Text style={styles.templateIcon}>{template.icon}</Text>
+                    <Ionicons
+                        name={template.icon as any}
+                        size={28}
+                        color={colors.primary}
+                        style={{ marginBottom: 8 }}
+                    />
                     <Text style={[styles.templateName, { color: colors.text }]}>
                         {template.name}
                     </Text>
@@ -105,7 +112,7 @@ export function TemplatePicker({
                     onPress={(e) => e.stopPropagation()}
                 >
                     <Animated.Text
-                        entering={FadeIn.delay(50).duration(300)}
+                        entering={Platform.OS === 'web' ? undefined : FadeIn.delay(50).duration(300)}
                         style={[styles.modalTitle, { color: colors.text }]}
                     >
                         Choose a Template
