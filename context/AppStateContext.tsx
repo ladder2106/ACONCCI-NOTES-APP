@@ -3,10 +3,11 @@ import {
     AppState,
     Category,
     Note,
-    NoteTemplate,
     Tag,
     ViewMode,
 } from '@/types/note';
+import { createEmptyBlockDocument } from '@/utils/blocks/parse';
+import { ensureBlockDocument } from '@/utils/blocks/migrate';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // @ts-ignore
 import { login as apiLogin, signup as apiSignup, logout as apiLogout } from '../services/authService';
@@ -23,34 +24,6 @@ const defaultSettings: AppSettings = {
 };
 
 const defaultCategories: Category[] = [];
-
-export const noteTemplates: NoteTemplate[] = [
-    { id: 'blank', name: 'Blank Note', content: '', icon: 'document' },
-    {
-        id: 'meeting',
-        name: 'Meeting Notes',
-        content: '# Meeting Notes\n\n**Date:** \n**Attendees:** \n\n## Agenda\n- \n\n## Discussion\n\n\n## Action Items\n- [ ] \n\n## Next Steps\n',
-        icon: 'people',
-    },
-    {
-        id: 'journal',
-        name: 'Daily Journal',
-        content: "# Daily Journal\n\n**Date:** \n**Mood:** \n\n## What happened today?\n\n\n## Grateful for:\n- \n\n## Tomorrow's goals:\n- \n",
-        icon: 'journal',
-    },
-    {
-        id: 'todo',
-        name: 'To-Do List',
-        content: '# To-Do List\n\n## Today\n- [ ] \n\n## This Week\n- [ ] \n\n## Backlog\n- [ ] \n',
-        icon: 'checkbox',
-    },
-    {
-        id: 'project',
-        name: 'Project Plan',
-        content: '# Project Plan\n\n**Project Name:** \n**Start Date:** \n**Deadline:** \n\n## Overview\n\n\n## Goals\n1. \n\n## Tasks\n- [ ] \n\n## Resources\n\n\n## Notes\n',
-        icon: 'rocket',
-    },
-];
 
 function generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substring(2, 12);
@@ -70,7 +43,7 @@ interface AppContextType extends AppState {
         byCategory: Record<string, number>;
         byTag: Record<string, number>;
     };
-    createNote: (template?: NoteTemplate, noteType?: Note['type']) => Note;
+    createNote: (noteType?: Note['type']) => Note;
     updateNote: (id: string, updates: Partial<Note>) => void;
     deleteNote: (id: string, permanent?: boolean) => void;
     restoreNote: (id: string) => void;
@@ -148,9 +121,21 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
                             icon: emojiToIconMap[c.icon] || c.icon
                         }));
 
+                    const migratedNotes = (data.notes || []).map((note: Note) => {
+                        if (note.type !== 'plain_text') {
+                            return note;
+                        }
+
+                        return {
+                            ...note,
+                            blocks: ensureBlockDocument((note as any).blocks, note.content || ''),
+                        } as Note;
+                    });
+
                     setState((prev) => ({
                         ...prev,
                         ...data,
+                        notes: migratedNotes,
                         categories: sanitizedCategories,
                         settings: { ...defaultSettings, ...data.settings },
                     }));
@@ -178,12 +163,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         }
     }, [state, isLoaded]);
 
-    const createNote = useCallback((template?: NoteTemplate, noteType?: Note['type']) => {
+    const createNote = useCallback((noteType?: Note['type']) => {
         const now = new Date().toISOString();
         const base = {
             id: generateId(),
             title: '',
-            content: template?.content || '',
+            content: '',
             createdAt: now,
             updatedAt: now,
             categoryId: null,
@@ -194,9 +179,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
             isTrashed: false,
             isDraft: !state.settings.autoSave,
             lastOpenedAt: now,
-            size: (template?.content || '').length,
+            size: 0,
             color: null,
-            isMarkdown: !!template?.content,
+            isMarkdown: false,
         };
 
         const type = noteType || 'vault';
@@ -223,6 +208,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
                 newNote = {
                     ...base,
                     type: 'plain_text',
+                    blocks: createEmptyBlockDocument(),
                     wordCount: 0,
                     characterCount: 0,
                 };

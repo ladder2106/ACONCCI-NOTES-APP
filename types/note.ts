@@ -1,3 +1,5 @@
+import { BlockDocument } from "@/types/blocks";
+
 // Base note interface
 export interface BaseNote {
   id: string;
@@ -46,6 +48,7 @@ export interface StickyNote extends BaseNote {
 // Plain Text Note type - clean minimal text editor
 export interface PlainTextNote extends BaseNote {
   type: "plain_text";
+  blocks?: BlockDocument;
   wordCount: number;
   characterCount: number;
   lastAutoSave?: string;
@@ -251,13 +254,6 @@ export interface AppSettings {
   sortOrder: "asc" | "desc";
   autoSave: boolean;
   showWordCount: boolean;
-}
-
-export interface NoteTemplate {
-  id: string;
-  name: string;
-  content: string;
-  icon: string;
 }
 
 export type ViewMode =

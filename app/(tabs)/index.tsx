@@ -1,10 +1,10 @@
 import { CategoryDrawer } from '@/components/CategoryDrawer';
 import { CreateCategoryModal } from '@/components/CreateCategoryModal';
 import { NoteCard } from '@/components/NoteCard';
-import { TemplatePicker } from '@/components/TemplatePicker';
+import { NoteTypeSelector } from '@/components/NoteTypeSelector';
 import { AppStateContext } from '@/context/AppStateContext';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { NoteTemplate } from '@/types/note';
+import { Note } from '@/types/note';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,7 @@ import React, { useContext, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Modal,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -25,17 +26,18 @@ export default function NotesScreen() {
   const colors = useThemeColors();
   const router = useRouter();
 
-  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [showNoteTypeDialog, setShowNoteTypeDialog] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [viewType, setViewType] = useState<'list' | 'grid'>(appState.settings.defaultView);
 
   const handleCreateNote = () => {
-    setShowTemplateDialog(true);
+    setShowNoteTypeDialog(true);
   };
 
-  const handleSelectTemplate = (template: NoteTemplate) => {
-    const note = appState.createNote(template);
+  const handleSelectNoteType = (noteType?: Note['type']) => {
+    if (!noteType) return;
+    const note = appState.createNote(noteType);
     router.push(`/note/${note.id}` as any);
   };
 
@@ -226,11 +228,14 @@ export default function NotesScreen() {
       )}
 
       {/* Modals */}
-      <TemplatePicker
-        visible={showTemplateDialog}
-        onClose={() => setShowTemplateDialog(false)}
-        onSelectTemplate={handleSelectTemplate}
-      />
+      <Modal visible={showNoteTypeDialog} animationType="slide" transparent>
+        <View style={styles.noteTypeModalOverlay}>
+          <NoteTypeSelector
+            onClose={() => setShowNoteTypeDialog(false)}
+            onSelectNoteType={handleSelectNoteType}
+          />
+        </View>
+      </Modal>
 
       <CategoryDrawer
         visible={showDrawer}
@@ -379,5 +384,9 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 5,
+  },
+  noteTypeModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
   },
 });
